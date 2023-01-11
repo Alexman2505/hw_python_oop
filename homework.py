@@ -1,30 +1,30 @@
+from dataclasses import dataclass, asdict
+
+
+@dataclass
 class InfoMessage:
     """Информационное сообщение о тренировке."""
-    def __init__(self,
-                 training_type: str,
-                 duration: float,
-                 distance: float,
-                 speed: float,
-                 calories: float) -> None:
-        self.training_type = training_type
-        self.duration = duration
-        self.distance = distance
-        self.speed = speed
-        self.calories = calories
+
+    training_type: str
+    duration: float
+    distance: float
+    speed: float
+    calories: float
+    message = ('Тип тренировки: {}; '
+               'Длительность: {:.3f} ч.; '
+               'Дистанция: {:.3f} км; '
+               'Ср. скорость: {:.3f} км/ч; '
+               'Потрачено ккал: {:.3f}.')
 
     def get_message(self) -> str:
-        return (f'Тип тренировки: {self.training_type}; '
-                f'Длительность: {self.duration:.3f} ч.; '
-                f'Дистанция: {self.distance:.3f} км; '
-                f'Ср. скорость: {self.speed:.3f} км/ч; '
-                f'Потрачено ккал: {self.calories:.3f}.')
+        return self.message.format(*asdict(self).values())
 
 
 class Training:
     """Базовый класс тренировки."""
-    LEN_STEP: float = 0.65  # Расстояние одного шага в метрах.
-    MIN_IN_H: int = 60  # Коэффициент перевода минут в часы.
-    M_IN_KM: int = 1000  # Коэффициент перевода м в км.
+    LEN_STEP: float = 0.65
+    MIN_IN_H: int = 60
+    M_IN_KM: int = 1000
 
     def __init__(self,
                  action: int,
@@ -44,7 +44,7 @@ class Training:
 
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
-        pass  # В каждом подклассе свой расчет калорий.
+        raise NotImplementedError("Тут сообщение о том, что случилось")
 
     def show_training_info(self) -> InfoMessage:
         """Вернуть информационное сообщение о выполненной тренировке."""
@@ -59,11 +59,6 @@ class Running(Training):
     """Тренировка: бег."""
     CALORIES_MEAN_SPEED_MULTIPLIER: int = 18  # Поправка из ТЗ.
     CALORIES_MEAN_SPEED_SHIFT: float = 1.79  # Поправка из ТЗ.
-
-    def __init__(self, action: int,
-                 duration: float,
-                 weight: float) -> None:
-        super().__init__(action, duration, weight)  # Из родительского класса.
 
     def get_spent_calories(self) -> float:
         return ((self.CALORIES_MEAN_SPEED_MULTIPLIER * self.get_mean_speed()
@@ -120,17 +115,21 @@ class Swimming(Training):
                 * self.duration)
 
 
-def read_package(workout_type: str, data: list) -> Training:
+def read_package(workout_type: str, data: list[int]) -> Training:
     """Прочитать данные полученные от датчиков."""
-    data_fitness: dict[str] = {'SWM': Swimming, 'RUN': Running,
-                               'WLK': SportsWalking}
-    return (data_fitness[workout_type](*data))
+    database_of_activity: dict[str, type[Training]] = {'SWM': Swimming,
+                                                       'RUN': Running,
+                                                       'WLK': SportsWalking}
+    if workout_type not in database_of_activity:
+        raise ValueError('Такого типа тренировки нет. '
+                         'Проверьте данные датчиков')
+    return database_of_activity[workout_type](*data)
 
 
 def main(training: Training) -> None:
     """Главная функция."""
     info: InfoMessage = training.show_training_info()
-    message: InfoMessage = info.get_message()
+    message: str = info.get_message()
     print(message)
 
 
